@@ -1,0 +1,19 @@
+# Git hooks; lefthook is the only owner of .git/hooks/.
+# Install once per clone: mise run hooks:install. Every command goes through mise, so hooks use
+# the pinned tools.
+
+pre-commit:
+  commands:
+    # The staged diff only; mise run secrets:scan covers the full history.
+    betterleaks:
+      run: mise exec -- betterleaks git --staged --no-banner --redact --config .betterleaks.toml
+
+commit-msg:
+  commands:
+    cog-verify:
+      run: mise exec -- cog verify --file {1}
+
+pre-push:
+  commands:
+    check:
+      run: mise run check
