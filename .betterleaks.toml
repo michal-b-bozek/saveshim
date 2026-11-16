@@ -1,0 +1,7 @@
+# betterleaks: the default rules, minus the modules mise run deps:install saves (not in git).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Downloaded PowerShell modules"
+paths = ['''(^|/)\.modules/''']

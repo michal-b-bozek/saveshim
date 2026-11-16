@@ -1,0 +1,70 @@
+# saveshim: pinned dev tools and quality tasks.
+# Nothing here is needed to use saveshim: end users run Install-Saveshim.ps1 in
+# Windows PowerShell. The PowerShell modules the checks load (Pester,
+# PSScriptAnalyzer) are pinned in tools/dev-modules.psd1, not here.
+
+# mise.lock was written by this mise (lockfile format 4), which 2026.10.3 cannot read. CI pins
+# the same version in .github/actions/setup-mise.
+min_version = "2026.11.4"
+
+[settings]
+lockfile = true
+# Refuse releases younger than a week. In an emergency, override one invocation with
+# MISE_MINIMUM_RELEASE_AGE=0.
+minimum_release_age = "168h"
+
+[tools]
+# Exact pins; bump in a reviewed build(deps) commit.
+powershell = "7.6.9"
+cocogitto = "7.0.0"
+betterleaks = "1.10.0"
+lefthook = "2.1.15"
+
+[tasks."deps:install"]
+description = "Save the pinned PowerShell modules into .modules/ (tools/dev-modules.psd1)"
+run = "pwsh -NoProfile -File tools/Install-DevModules.ps1"
+
+[tasks."hooks:install"]
+description = "Install the git hooks from lefthook.yml (once per clone)"
+run = "lefthook install"
+
+[tasks.lint]
+description = "Lint the PowerShell files (PSScriptAnalyzer, PSScriptAnalyzerSettings.psd1)"
+run = "pwsh -NoProfile -File tools/Invoke-Lint.ps1"
+
+[tasks.test]
+description = "Run the Pester tests in tests/ (the Windows-only ones are skipped elsewhere)"
+run = "pwsh -NoProfile -File tools/Invoke-Test.ps1"
+
+[tasks."commits:check"]
+description = "Check every commit message against Conventional Commits (cocogitto, cog.toml)"
+run = "cog check"
+
+[tasks."secrets:scan"]
+description = "Scan the git history and the working tree for secrets (betterleaks, .betterleaks.toml)"
+run = [
+  "betterleaks git --no-banner --redact --config .betterleaks.toml .",
+  "betterleaks dir --no-banner --redact --config .betterleaks.toml .",
+]
+
+[tasks.pack]
+description = "Pack the release zip, build/saveshim-<version>.zip, and its checksum (tools/New-ReleaseZip.ps1)"
+run = "pwsh -NoProfile -File tools/New-ReleaseZip.ps1"
+
+[tasks."version:set"]
+description = "Write a release version into Install-Saveshim.ps1 and stage it (cog bump hook)"
+usage = 'arg "<version>" help="X.Y.Z, without the v"'
+run = [
+  "pwsh -NoProfile -File tools/Set-Version.ps1 -Version \"$usage_version\"",
+  "git add -- Install-Saveshim.ps1",
+]
+
+[tasks."release:notes"]
+description = "Print a release's section of CHANGELOG.md, the GitHub release notes (tools/Get-ReleaseNotes.ps1)"
+usage = 'arg "<version>" help="X.Y.Z, without the v"'
+run = "pwsh -NoProfile -File tools/Get-ReleaseNotes.ps1 -Version \"$usage_version\""
+
+[tasks.check]
+description = "Run the local quality gates"
+depends = ["lint", "test", "commits:check", "secrets:scan"]
+run = "echo 'quality gates passed'"

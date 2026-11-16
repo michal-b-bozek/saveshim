@@ -1,0 +1,50 @@
+# cog.toml: cocogitto 7.x, single package.
+# Verify:  mise run commits:check
+# Bump:    cog bump --auto   (on main only)
+
+# Every commit is checked; there are no release tags to start from yet.
+ignore_merge_commits = true
+ignore_fixup_commits = true
+branch_whitelist = ["main"]
+tag_prefix = "v"
+skip_ci = "[skip ci]"
+
+# The checks run first: cocogitto does not roll back hook side effects. version:set then writes
+# the version into Install-Saveshim.ps1 and stages it, so the version commit and its tag carry it.
+pre_bump_hooks = ["mise run check", "mise run version:set {{version}}"]
+
+# No post_bump_hooks: the changelog is curated before anything is pushed. Release sequence:
+#   0. Delete every vX.Y.Z-rc.N tag, local and remote (git push origin :refs/tags/<tag>), and its
+#      draft pre-release (gh release delete <tag>): cog would start the changelog range there.
+#   1. cog bump --auto
+#   2. Curate CHANGELOG.md: `## [X.Y.Z] - date` and `###` sections, entries in user voice, and
+#      reference links at the bottom. Unreleased stays empty: cocogitto is its only author.
+#      `mise run release:notes X.Y.Z` prints the section the release notes will carry.
+#   3. git add CHANGELOG.md && git commit --amend --no-edit && mise run check &&
+#      git tag -f vX.Y.Z
+#   4. git push && git push origin vX.Y.Z
+#   5. The tag runs .github/workflows/release.yml, which ends in a draft GitHub Release with
+#      saveshim-X.Y.Z.zip and its SHA-256. Check it and publish it by hand.
+# To try the release flow first, push only a vX.Y.Z-rc.N tag: release.yml makes a draft
+# pre-release of it.
+
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+owner = "michal-b-bozek"
+repository = "saveshim"
+
+# Keep a Changelog 1.1 section names instead of cocogitto's Angular defaults.
+[commit_types]
+feat = { changelog_title = "Added" }
+fix = { changelog_title = "Fixed" }
+perf = { changelog_title = "Changed" }
+revert = { omit_from_changelog = true }
+refactor = { omit_from_changelog = true }
+docs = { omit_from_changelog = true }
+test = { omit_from_changelog = true }
+chore = { omit_from_changelog = true }
+style = { omit_from_changelog = true }
+ci = { omit_from_changelog = true }
+build = { omit_from_changelog = true }
