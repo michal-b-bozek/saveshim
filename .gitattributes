@@ -1,0 +1,6 @@
+# Windows tools read these files; give them CRLF in every checkout and in GitHub's
+# "Download ZIP" (git archive honours eol).
+* text=auto
+*.ps1 text eol=crlf
+*.psd1 text eol=crlf
+*.sdb binary

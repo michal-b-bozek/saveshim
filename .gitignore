@@ -1,0 +1,43 @@
+# --- Build output -----------------------------------------------------------
+# The compatibility database the script writes next to itself on every run.
+*.sdb
+# The release zip and checksum (mise run pack).
+build/
+
+# --- Dev tooling ------------------------------------------------------------
+# PowerShell modules saved by `mise run deps:install` (tools/Install-DevModules.ps1).
+.modules/
+# Pester and PSScriptAnalyzer result files.
+testResults.xml
+coverage.xml
+
+# --- mise -------------------------------------------------------------------
+# Per-developer overrides, in every file name mise reads.
+mise.local.toml
+.mise.local.toml
+mise.*.local.toml
+lefthook-local.yml
+.lefthook-local.yml
+
+# --- Credentials ------------------------------------------------------------
+*.key
+*.pem
+.env
+.env.*
+
+# --- Agent session state ----------------------------------------------------
+.task-record.md
+.claude/settings.local.json
+
+# --- OS junk, editor state, logs --------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+*.orig
+*.rej
+*.log
+*.PML
