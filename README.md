@@ -24,15 +24,15 @@ This is selfware: a tool written for my own PC and shared as-is.
 | Pharaoh Gold                 | `C:\Program Files (x86)\GOG Galaxy\Games\Pharaoh Gold`<br>or `C:\Program Files\GOG Galaxy\Games\Pharaoh Gold`             | `C:\Users\<user>\AppData\Roaming\Pharaoh\Saves`                 | Working, November 2026 |
 | Legend of Kyrandia (ScummVM) | `C:\Program Files (x86)\GOG Galaxy\Games\Legend of Kyrandia`<br>or `C:\Program Files\GOG Galaxy\Games\Legend of Kyrandia` | `C:\Users\<user>\AppData\Roaming\ScummVM\Saved games\Kyrandia` | Working, November 2026 |
 
-The first install folder is GOG Galaxy's default. The second is where the game goes when GOG
-Galaxy itself is installed in `C:\Program Files`; saveshim looks in both. Other games whose saves
-sit in the game folder should work too, if the game is a 32-bit program (see
-[Limits](#limits)). The examples here come from GOG, but nothing in saveshim is specific to GOG.
+Both install folders are GOG Galaxy defaults: which one you have depends on the version of GOG
+Galaxy that was installed. saveshim looks in both. Other games whose saves sit in the game folder
+should work too, if the game is a 32-bit program (see [Limits](#limits)). The examples here come
+from GOG, but nothing in saveshim is specific to GOG.
 
 ## Quick install
 
 For the games in the table, installed by GOG Galaxy in its own `Games` folder, with GOG Galaxy
-in `C:\Program Files (x86)` (the default) or `C:\Program Files`. For anything else, see
+in `C:\Program Files (x86)` or `C:\Program Files`, its default folders. For anything else, see
 [Custom install](#custom-install). You need an administrator account.
 
 1. On the [latest release](https://github.com/michal-b-bozek/saveshim/releases/latest), download

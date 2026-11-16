@@ -20,13 +20,13 @@ the quick install in the README runs unchanged, so an entry must work with the g
 installation:
 
 - **`SavePath`** in the folder the store's own client installs to by default, with its default
-  settings: for GOG, GOG Galaxy's `C:\Program Files (x86)\GOG Galaxy\Games\<Game>`. List the
-  same path under `C:\Program Files\GOG Galaxy\Games` too, as the existing entries do, for
-  PCs where GOG Galaxy is installed there.
+  settings. For GOG, list both of GOG Galaxy's default folders, as the existing entries do:
+  `C:\Program Files (x86)\GOG Galaxy\Games\<Game>` and `C:\Program Files\GOG Galaxy\Games\<Game>`.
+  Which one a PC has depends on the version of GOG Galaxy installed.
 - **`UserStore`** under `%USERAPPDATA%`, like the existing entries: `%USERAPPDATA%\<Game>\Saves`,
   or for a ScummVM game `%USERAPPDATA%\ScummVM\Saved games\<Game>`.
 - **Tested:** a normal user's new save landed in their own folder, on the Windows version you
-  name. Add the game to the README's table, with the default install folder and where the saves
+  name. Add the game to the README's table, with both install folders and where the saves
   go.
 - **32-bit:** the game's exe shows "32 bit" in Task Manager (see "Adding a game" in the README).
 

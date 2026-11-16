@@ -1,8 +1,8 @@
 # Games whose saves saveshim (Install-Saveshim.ps1) redirects to a per-user folder.
-# The paths below are where GOG Galaxy installs games, with Galaxy in its
-# default C:\Program Files (x86) or in C:\Program Files. A game whose folder
-# is not on this PC is skipped with a warning, so entries for games you don't
-# have can stay.
+# The paths below are where GOG Galaxy installs games, with Galaxy in
+# C:\Program Files (x86) or C:\Program Files; either can be its default,
+# depending on the Galaxy version. A game whose folder is not on this PC is
+# skipped with a warning, so entries for games you don't have can stay.
 #
 # One entry per save folder:
 #   Name           Short name, used for messages and the compatibility fix.
