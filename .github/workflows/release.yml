@@ -1,0 +1,157 @@
+# Runs on a vX.Y.Z or vX.Y.Z-rc.N tag pushed by the release sequence in cog.toml and ends in a
+# draft GitHub Release with saveshim-<version>.zip and its SHA-256; publish it by hand after a
+# look. A release candidate (-rc.N) tries the release flow before the bump: it may come from any
+# commit, its zip carries the version in Install-Saveshim.ps1 at that commit, and it has no
+# CHANGELOG.md section of its own.
+# Only the publish job holds a token that can write, and it runs no project code. It also signs
+# the zip's provenance, which `gh attestation verify` checks.
+# Actions are pinned by commit SHA, the tag in a comment.
+
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # First, so a wrong tag fails before the CI gate runs.
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      prerelease: ${{ steps.tag.outputs.prerelease }}
+    steps:
+      # Full history, so the tagged commit can be checked against main.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: ./.github/actions/setup-mise
+
+      # Releases come from main, and version:set wrote the version into Install-Saveshim.ps1
+      # during the bump: a release tag elsewhere, or a hand-made one, fails here.
+      - name: Check the tag
+        id: tag
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$ ]]; then
+            prerelease=true
+          elif [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            prerelease=false
+            if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+              printf 'error: tag %s is not on main\n' "$GITHUB_REF_NAME" >&2
+              exit 65
+            fi
+            # The checkout gives the script CRLF line endings (.gitattributes).
+            if ! tr -d '\r' < Install-Saveshim.ps1 | grep --quiet --line-regexp --fixed-strings \
+              "\$Version = '${version}'"; then
+              # shellcheck disable=SC2016 # a literal $Version
+              printf 'error: tag %s does not match $Version in Install-Saveshim.ps1\n' \
+                "$GITHUB_REF_NAME" >&2
+              exit 65
+            fi
+          else
+            printf 'error: tag %s is neither vX.Y.Z nor vX.Y.Z-rc.N\n' "$GITHUB_REF_NAME" >&2
+            exit 65
+          fi
+          printf 'VERSION=%s\nPRERELEASE=%s\n' "$version" "$prerelease" >> "$GITHUB_ENV"
+          printf 'prerelease=%s\n' "$prerelease" >> "$GITHUB_OUTPUT"
+
+      - name: Install the PowerShell modules
+        run: mise run deps:install
+
+      - name: Pack
+        run: mise run pack
+
+      # --output interleave: the notes file gets the task's stdout only, never a task-name prefix.
+      # One line per paragraph: GitHub shows a line break in release notes as a break.
+      - name: Write the notes
+        run: |
+          : "${VERSION:?}" "${PRERELEASE:?}"
+          zips=(build/saveshim-*.zip)
+          if [[ ${#zips[@]} -ne 1 || ! -f ${zips[0]} ]]; then
+            printf 'error: expected one zip in build/, found: %s\n' "${zips[*]}" >&2
+            exit 65
+          fi
+          zip_name="${zips[0]##*/}"
+          {
+            if [[ "$PRERELEASE" == true ]]; then
+              printf 'Release candidate %s, built from %s for testing.\n\n' "$VERSION" "$GITHUB_SHA"
+            else
+              mise run --output interleave release:notes "$VERSION"
+              printf '\n'
+            fi
+            printf '### Checking the download\n\n'
+            # shellcheck disable=SC2016 # literal backticks: Markdown code
+            printf 'Download %s (not "Source code", which GitHub adds to every release) and follow the quick install in the README. To check that the zip is the one this repository built: `sha256sum -c %s.sha256`, or `gh attestation verify %s --repo %s`.\n' \
+              "$zip_name" "$zip_name" "$zip_name" "$GITHUB_REPOSITORY"
+          } > build/notes.md
+
+      - name: Keep the release files
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: |
+            build/saveshim-*.zip
+            build/saveshim-*.zip.sha256
+            build/notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  check:
+    needs: build
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  # The only job with a token that can write: no checkout, no mise; gh is the runner's
+  # preinstalled copy.
+  publish:
+    needs: [build, check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      # Sigstore signing (an OIDC token) and storing the attestation.
+      id-token: write
+      attestations: write
+    steps:
+      - name: Fetch the release files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release
+          path: release
+
+      - name: Attest the zip's build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/saveshim-*.zip
+
+      - name: Create the draft release
+        run: |
+          : "${PRERELEASE:?}"
+          flags=(--draft --verify-tag)
+          if [[ "$PRERELEASE" == true ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" "${flags[@]}" \
+            --title "saveshim $GITHUB_REF_NAME" \
+            --notes-file release/notes.md \
+            release/saveshim-*.zip release/saveshim-*.zip.sha256
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
