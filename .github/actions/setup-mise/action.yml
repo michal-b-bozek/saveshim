@@ -1,0 +1,21 @@
+# The one place CI pins mise; workflows use it right after their checkout.
+
+name: Set up mise
+description: Trust the checkout, then install the pinned mise and the tools in mise.lock
+
+runs:
+  using: composite
+  steps:
+    # mise ignores an untrusted mise.toml.
+    - name: Trust the checkout
+      shell: bash
+      run: printf 'MISE_TRUSTED_CONFIG_PATHS=%s\n' "$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+
+    # With mise.lock present the action runs `mise install --locked`: a tool missing from the
+    # lock fails. version equals min_version in mise.toml; sha256 is that of the linux-x64
+    # binary; recompute it when bumping the version.
+    - name: Install mise and the pinned tools
+      uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+      with:
+        version: 2026.11.4
+        sha256: 0296d9cba9324106d4e0962bb94a2072902f3658813aeb3b09504947bb8ddc2b

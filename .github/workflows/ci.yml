@@ -1,0 +1,91 @@
+# check: the same gates as `mise run check`, with the mise-pinned tools, on Linux.
+# windows: lint, and the tests in both Windows PowerShell 5.1 (what end users run) and pwsh.
+# smoke: writes, installs, re-installs and uninstalls a real compatibility database
+#   (tests/smoke/Invoke-SmokeTest.ps1). GitHub's Windows runners are elevated and disposable.
+# Actions are pinned by commit SHA, the tag in a comment.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  # release.yml runs this workflow as the gate before a release.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      # Full history: commits:check and secrets:scan read every commit.
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up mise
+        uses: ./.github/actions/setup-mise
+
+      - name: Install the PowerShell modules
+        run: mise run deps:install
+
+      - name: Check
+        run: mise run --output prefix check
+
+  windows:
+    name: windows (${{ matrix.shell }})
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [powershell, pwsh]
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Save-PSResource needs pwsh 7.4+; the saved modules load in 5.1 too.
+      - name: Install the PowerShell modules
+        shell: pwsh
+        run: ./tools/Install-DevModules.ps1
+
+      - name: Record the PowerShell version
+        run: $PSVersionTable | Format-Table -AutoSize | Out-String
+
+      - name: Lint
+        if: matrix.shell == 'pwsh'
+        run: ./tools/Invoke-Lint.ps1
+
+      - name: Test
+        run: ./tools/Invoke-Test.ps1
+
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    # Windows PowerShell 5.1, as end users run it.
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Smoke test
+        run: ./tests/smoke/Invoke-SmokeTest.ps1 -ThisMachineIsDisposable
