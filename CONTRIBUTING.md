@@ -1,10 +1,11 @@
 # Contributing
 
-saveshim is selfware: written for one PC and shared as-is, with no support and no roadmap (see the
-[README](README.md)). Issues and pull requests may go unanswered. If you need it to work
-differently, forking it is the expected way, and the [MIT licence](LICENSE) allows it.
+saveshim is selfware: written for one PC and shared as-is, without day-to-day support or a
+roadmap (see the [README](README.md)). Questions, ideas and game proposals are welcome as issues,
+and I'll get to them when I have spare time. If you need it to work differently sooner, you're
+welcome to fork it; the [MIT licence](LICENSE) allows it.
 
-If you still send a pull request:
+If you send a pull request:
 
 - Keep it to one change, in [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 - Run `mise run check` first; the [developer guide](docs/development.md) sets it up.
